@@ -1,0 +1,51 @@
+//CPU Utilzation
+Perf
+| where ObjectName == "Processor" and CounterName == "% Processor Time" and InstanceName == "_Total"
+| summarize AvgCPUUsage=avg(CounterValue) by bin(TimeGenerated, 5m), Computer
+| where AvgCPUUsage > 80 // Threshold of 80%
+
+
+//Memory Usage
+Perf
+| where ObjectName == "Memory" and CounterName == "% Committed Bytes In Use"
+| summarize AvgMemoryUsage=avg(CounterValue) by bin(TimeGenerated, 5m), Computer
+| where AvgMemoryUsage > 80 // Threshold of 80%
+
+Disk I/O Query 
+Perf
+| where ObjectName == "LogicalDisk" and CounterName == "Disk Transfers/sec"
+| summarize AvgDiskTransfers=avg(CounterValue) by bin(TimeGenerated, 5m), Computer
+| where AvgDiskTransfers > 100 // Example threshold, adjust based on baseline performance
+
+Network Trffic
+Perf
+| where ObjectName == "Network Interface" and (CounterName == "Bytes Total/sec")
+| summarize AvgNetworkTraffic=avg(CounterValue) by bin(TimeGenerated, 5m), Computer
+| where AvgNetworkTraffic > 10000000 // Threshold of 10 MB/sec, adjust as necessary
+
+Disk Space Usage
+Perf
+| where ObjectName == "LogicalDisk" and CounterName == "% Free Space"
+| summarize AvgFreeSpace=avg(CounterValue) by bin(TimeGenerated, 5m), Computer
+| where AvgFreeSpace < 20 // Alert if less than 20% disk space is free
+
+System Uptime
+Perf
+| where ObjectName == "System" and CounterName == "System Up Time"
+| summarize AvgUptime=avg(CounterValue) by bin(TimeGenerated, 5m), Computer
+
+Process Count
+Perf
+| where ObjectName == "Process" and CounterName == "Process Count"
+| summarize AvgProcessCount=avg(CounterValue) by bin(TimeGenerated, 5m), Computer
+
+Windows Services Status
+Event
+| where Source == "Service Control Manager" and EventID == 7036
+| summarize count() by bin(TimeGenerated, 5m), Computer, RenderedDescription
+| where RenderedDescription contains "stopped"
+
+Windows Security Events
+SecurityEvent
+| where EventID == 4625 // Failed login attempt
+| summarize FailedLogins=count() by bin(TimeGenerated, 5m), Computer
