@@ -4,17 +4,20 @@
         "resourceType": "Microsoft.Compute/virtualMachines",
         "configurations": [
           {
-            "type": "log",
             "description": "High CPU Usage",
-            "query": "Perf | where ObjectName == 'Processor' and CounterName == '% Processor Time' and InstanceName == '_Total' | summarize AvgCPUUsage=avg(CounterValue) by bin(TimeGenerated, 5m), Computer | where AvgCPUUsage > 80",
+            "severity": 3,
             "frequencyInMinutes": 5,
-            "severity": 3
+            "timeWindowInMinutes": 5,
+            "metricMeasureColumn": "AggregatedValue",
+            "query": "Perf | where ObjectName == 'Processor' and CounterName == '% Processor Time' and InstanceName == '_Total' | summarize AggregatedValue = avg(CounterValue) by bin(TimeGenerated, 1h)"
           },
           {
             "type": "log",
             "description": "High Memory Usage",
             "query": "Perf | where ObjectName == 'Memory' and CounterName == '% Committed Bytes In Use' | summarize AvgMemoryUsage=avg(CounterValue) by bin(TimeGenerated, 5m), Computer | where AvgMemoryUsage > 80",
             "frequencyInMinutes": 5,
+            "timeWindowInMinutes": 5,
+            "metricMeasureColumn": "AvgMemoryUsage",
             "severity": 3
           }
         ]
@@ -27,6 +30,7 @@
             "description": "SQL Database Deadlocks",
             "query": "AzureDiagnostics | where Category == 'SQLDatabaseDeadlocks' | summarize CountDeadlocks=count() by bin(TimeGenerated, 5m), Resource",
             "frequencyInMinutes": 15,
+            "timeWindowInMinutes": 5,
             "severity": 2
           },
           {
@@ -34,6 +38,7 @@
             "description": "SQL Database CPU Usage",
             "query": "AzureMetrics | where ResourceId contains 'databases' and MetricName == 'cpu_percent' | summarize AvgCpuUsage=avg(Total) by bin(TimeGenerated, 5m), Resource | where AvgCpuUsage > 80",
             "frequencyInMinutes": 15,
+            "timeWindowInMinutes": 5,
             "severity": 3
           }
         ]
