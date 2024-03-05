@@ -28,7 +28,12 @@ function Get-ResourcesByType {
             $resources += Get-AzVM -ResourceGroupName $ResourceGroupName
         }
         "SQL" {
-            $resources += Get-AzSqlDatabase -ResourceGroupName $ResourceGroupName
+            # Get all SQL servers in the resource group
+            $servers = Get-AzSqlServer -ResourceGroupName $ResourceGroupName
+            # For each server, get all databases and add them to the resources
+            foreach ($server in $servers) {
+                $resources += Get-AzSqlDatabase -ResourceGroupName $ResourceGroupName -ServerName $server.ServerName
+            }
         }
         # Add more resource types as needed
     }
