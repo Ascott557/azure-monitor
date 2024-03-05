@@ -1,51 +1,53 @@
 {
-    "actionGroupName": "Codec Service Desk",
-    "email": "a.scott@codecsystems.co.uk",
-    "GroupShortName": "Codec",
-    "emailReceivers": [
-      "a.scott@codecsystems.co.uk"],
-    "resources": [
-      {
-        "type": "VM",
-        "alertRules": [
-          {
-            "name": "HighCpuAlert",
-            "condition": "avg percentage CPU > 80",
-            "description": "High CPU usage alert",
-            "windowSize": "5m",
-            "evaluationFrequency": "1m",
-            "severity": 4
-          },
-          {
-            "name": "HighMemoryAlert",
-            "condition": "avg Memory > 80",
-            "description": "High Memory usage alert",
-            "windowSize": "5m",
-            "evaluationFrequency": "1m",
-            "severity": 4
-          }
-        ]
-      },
-      {
-        "type": "SQL",
-        "alertRules": [
-          {
-            "name": "HighDTUAlert",
-            "condition": "avg dtu_consumption_percent > 80",
-            "description": "High DTU consumption alert",
-            "windowSize": "5m",
-            "evaluationFrequency": "1m",
-            "severity": 4
-          },
-          {
-            "name": "HighConnectionAlert",
-            "condition": "avg connections > 100",
-            "description": "High number of connections alert",
-            "windowSize": "5m",
-            "evaluationFrequency": "1m",
-            "severity": 4
-          }
-        ]
-      }
-    ]
-  }
+  "actionGroupName": "Codec Service Desk",
+  "email": "a.scott@codecsystems.co.uk",
+  "GroupShortName": "Codec",
+  "emailReceivers": [
+    "a.scott@codecsystems.co.uk"
+  ],
+  "resources": [
+    {
+      "type": "VM",
+      "alertRules": [
+        {
+          "name": "HighCpuAlert",
+          "metricName": "percentage CPU",
+          "operator": "GreaterThan",
+          "threshold": 90,
+          "timeAggregation": "Average",
+          "description": "High CPU usage alert",
+          "windowSize": "5m",
+          "evaluationFrequency": "1m",
+          "severity": 4
+        }
+      ]
+    },
+    {
+      "type": "SQL",
+      "alertRules": [
+        {
+          "name": "HighDTUAlert",
+          "metricName": "dtu_consumption_percent",
+          "operator": "GreaterThan",
+          "threshold": 80,
+          "timeAggregation": "Average",
+          "description": "High DTU consumption alert",
+          "windowSize": "5m",
+          "evaluationFrequency": "1m",
+          "severity": 4
+        },
+        {
+          "name": "HighConnectionAlert",
+          "metricName": "connections",
+          "operator": "GreaterThan",
+          "threshold": 100,
+          "timeAggregation": "Average",
+          "description": "High number of connections alert",
+          "windowSize": "5m",
+          "evaluationFrequency": "1m",
+          "severity": 4
+        }
+      ]
+    }
+  ]
+}

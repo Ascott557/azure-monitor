@@ -1,4 +1,4 @@
-Import-Module Az.Monitor
+Import-Module Az.Monitor -RequiredVersion 5.1.0
 # Global Variables
 $global:resourceGroupName = "Andre-AzureMonitor"
 $global:workspaceName = "amworkspace"
@@ -66,21 +66,24 @@ function Ensure-ActionGroupExists {
 #     param ($Type)
 #     # Fetch resources based on type (VM, SQL, etc.)
 # }
-
-# # Function to Apply Alert Rules
+# Function to Apply Alert Rules
 function Apply-AlertRules {
     param (
         $Resource,
         $AlertRules,
         $actionGroupId
     )
+
     foreach ($rule in $AlertRules) {
-        # Implement logic to create/update alert rules using New-AzMetricAlertRule or similar
-        Write-Host "Applying $($rule.name) to $($Resource.Name)"
+        # Create criteria object
+        $criteria = New-AzMetricAlertRuleV2Criteria -MetricName $rule.metricName -Operator $rule.operator -Threshold $rule.threshold -TimeAggregation $rule.timeAggregation
+
+        # Create alert rule
+        New-AzMetricAlertRuleV2 -Name $rule.name -ResourceGroupName $Resource.ResourceGroupName -WindowSize $rule.windowSize -Frequency $rule.frequency -TargetResourceId $Resource.Id -Criteria $criteria -ActionGroupId $actionGroupId -Severity $rule.severity -Description $rule.description
+
+        Write-Host "Metric alert rule '$($rule.name)' applied to $($Resource.Id)"
     }
 }
-
-
 
 # Main Script Execution
 $config = Load-Configuration -ConfigPath $global:configPath
@@ -92,8 +95,9 @@ foreach ($resourceConfig in $config.resources) {
     $resources = Get-ResourcesByType -Type $resourceConfig.type
     Write-Host "Resources: $resources" # Debugging line
     foreach ($resource in $resources) {
+        $alertRules = $resourceConfig.alertRules
         Write-Host "Resource: $resource" # Debugging line
-        Write-Host "Alert Rules: $($resourceConfig.alertRules)" # Debugging line
-        Apply-AlertRules -Resource $resource -AlertRules $resourceConfig.alertRules
+        Write-Host "Alert Rules: $alertRules" # Debugging line
+        Apply-AlertRules -Resource $resource -AlertRules $alertRules -actionGroupId $actionGroupId
     }
 }
