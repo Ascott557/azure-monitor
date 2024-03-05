@@ -1,6 +1,7 @@
 {
     "actionGroupName": "Codec Service Desk",
     "email": "a.scott@codecsystems.co.uk",
+    "GroupShortName": "Codec",
     "emailReceivers": [
       "a.scott@codecsystems.co.uk"],
     "resources": [

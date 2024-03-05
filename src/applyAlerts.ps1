@@ -1,4 +1,4 @@
-Import-Module Az.Monitor -ErrorAction SilentlyContinue
+Import-Module Az.Monitor
 # Global Variables
 $global:resourceGroupName = "Andre-AzureMonitor"
 $global:workspaceName = "amworkspace"
@@ -43,7 +43,7 @@ function Ensure-ActionGroupExists {
     $emailReceiver = New-AzActionGroupReceiver -Name "Primary Email" -EmailAddress $email
     # Existing logic to check and create action group
     try {
-        $actionGroup = Get-AzActionGroup -Name $actionGroupName -ResourceGroupName $resourceGroupName -ErrorAction Stop
+        $actionGroup = Get-AzActionGroup -Name $actionGroupName -ResourceGroupName $resourceGroupName -ErrorAction Stop -Verbose
     } catch {
         Write-Host "Action Group '$actionGroupName' not found. Creating..."
         $emailReceiver = @(
@@ -52,7 +52,12 @@ function Ensure-ActionGroupExists {
                 emailAddress = $email;
             }
         )
-        $actionGroup = New-AzActionGroup -ResourceGroupName $resourceGroupName -Name $actionGroupName -ShortName ($actionGroupName.Substring(0, [math]::Min(12, $actionGroupName.Length))) -Location $global:location -EmailReceiver $emailReceiver -ErrorAction Stop
+        Write-Host "Resource Group Name: $resourceGroupName" # Debugging line
+        Write-Host "Action Group Name: $actionGroupName" # Debugging line
+        Write-Host "Email Receiver: $emailReceiver" # 
+        $actionGroup = New-AzActionGroup -ResourceGroupName $resourceGroupName -Name $actionGroupName -ShortName ($actionGroupName.Substring(0, [math]::Min(12, $actionGroupName.Length))) -Location $global:location -EmailReceiver $emailReceiver -Enabled -ErrorAction Stop -Verbose
+        Write-Host "Action Group ID: $($actionGroup.Id)" # Debugging line
+
     }
     return $actionGroup.Id
 }
@@ -79,12 +84,16 @@ function Apply-AlertRules {
 
 # Main Script Execution
 $config = Load-Configuration -ConfigPath $global:configPath
-Write-Host "Config: $config"
+Write-Host "Calling Ensure-ActionGroupExists with Resource Group: $global:resourceGroupName and Config: $config"
 $actionGroupId = Ensure-ActionGroupExists -resourceGroupName $global:resourceGroupName -config $config
+Write-Host "Returned from Ensure-ActionGroupExists with Action Group ID: $actionGroupId"
 
 foreach ($resourceConfig in $config.resources) {
     $resources = Get-ResourcesByType -Type $resourceConfig.type
+    Write-Host "Resources: $resources" # Debugging line
     foreach ($resource in $resources) {
+        Write-Host "Resource: $resource" # Debugging line
+        Write-Host "Alert Rules: $($resourceConfig.alertRules)" # Debugging line
         Apply-AlertRules -Resource $resource -AlertRules $resourceConfig.alertRules
     }
 }
