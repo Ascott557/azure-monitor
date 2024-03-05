@@ -58,6 +58,12 @@ foreach ($vm in $vms) {
     # Call the function to install the Azure extension
     Install-AzureExtensionOnVMs -vm $vm
 }
+Get all SQL Databases with Monitor tag set to enabled
+$sqldatabases = Get-AzResource -Tag @{ Monitor = "Enabled" } -ResourceType "Microsoft.Sql/servers/databases"
+# Output the number of SQL Databases found
+Write-Host "Found $($sqldatabases.Count) SQL Databases with Monitor tag set to Enabled"
+# Loop through each SQL Database
+
 function Apply-LogAlert {
     param (
         [string]$resourceId,

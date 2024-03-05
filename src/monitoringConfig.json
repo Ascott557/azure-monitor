@@ -46,3 +46,53 @@
     ]
   }
   
+  [ add type to the log queries ]
+    {
+      "description": "High CPU Usage on VM",
+      "severity": 3,
+      "frequencyInMinutes": 5,
+      "timeWindowInMinutes": 5,
+      "metricMeasureColumn": "AggregatedValue",
+      "query": "Perf | where ObjectName == 'Processor' and CounterName == '% Processor Time' and InstanceName == '_Total' | summarize AggregatedValue = avg(CounterValue) by bin(TimeGenerated, 1h)"
+    },
+    {
+      "description": "High Memory Usage on VM",
+      "severity": 3,
+      "frequencyInMinutes": 5,
+      "timeWindowInMinutes": 5,
+      "metricMeasureColumn": "AggregatedValue",
+      "query": "Perf | where ObjectName == 'Memory' and CounterName == 'Available MBytes' | summarize AggregatedValue = min(CounterValue) by bin(TimeGenerated, 1h)"
+    },
+    {
+      "description": "Low Disk Space on VM",
+      "severity": 3,
+      "frequencyInMinutes": 5,
+      "timeWindowInMinutes": 5,
+      "metricMeasureColumn": "AggregatedValue",
+      "query": "Perf | where ObjectName == 'LogicalDisk' and CounterName == '% Free Space' and InstanceName == '_Total' | summarize AggregatedValue = min(CounterValue) by bin(TimeGenerated, 1h)"
+    },
+    {
+      "description": "Failed Logins on SQL Server",
+      "severity": 3,
+      "frequencyInMinutes": 5,
+      "timeWindowInMinutes": 5,
+      "metricMeasureColumn": "AggregatedValue",
+      "query": "AuditEvent | where Category == 'Logon' and EventSubclass == 'FAILED_LOGIN_GROUP' | summarize AggregatedValue = count() by bin(TimeGenerated, 1h)"
+    },
+    {
+      "description": "Long-Running Queries on SQL Server",
+      "severity": 3,
+      "frequencyInMinutes": 5,
+      "timeWindowInMinutes": 5,
+      "metricMeasureColumn": "AggregatedValue",
+      "query": "SqlRequests | where Duration > 60000 | summarize AggregatedValue = count() by bin(TimeGenerated, 1h)"
+    },
+    {
+      "description": "High CPU Usage on SQL Server",
+      "severity": 3,
+      "frequencyInMinutes": 5,
+      "timeWindowInMinutes": 5,
+      "metricMeasureColumn": "AggregatedValue",
+      "query": "Perf | where ObjectName == 'SQLServer:Resource Pool Stats' and CounterName == 'CPU usage %' and InstanceName == 'default' | summarize AggregatedValue = avg(CounterValue) by bin(TimeGenerated, 1h)"
+    }
+  ]
