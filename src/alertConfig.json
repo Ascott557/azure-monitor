@@ -10,43 +10,150 @@
       "type": "VM",
       "alertRules": [
         {
-          "name": "HighCpuAlert",
-          "metricName": "percentage CPU",
+          "name": "CPUUtilization",
+          "description": "Alerts when CPU utilization exceeds 80%",
+          "severity": 3,
+          "enabled": true,
+          "query": "Perf | where ObjectName == 'Processor' and CounterName == '% Processor Time' and InstanceName == '_Total' | summarize AvgCPUUsage=avg(CounterValue) by bin(TimeGenerated, 5m), Computer | where AvgCPUUsage > 80",
+          "evaluationFrequency": "PT5M",
+          "windowSize": "PT1H",
+          "threshold": 80,
           "operator": "GreaterThan",
-          "threshold": 90,
           "timeAggregation": "Average",
-          "description": "High CPU usage alert",
-          "windowSize": "5m",
-          "evaluationFrequency": "1m",
-          "severity": 4
-        }
+          "metricName": "Processor Time",
+          "metricMeasureColumn": "AvgCPUUsage"
+        },
+        {
+          "name": "MemoryUsage",
+          "description": "Alerts when memory usage exceeds 80%",
+          "severity": 3,
+          "enabled": true,
+          "query": "Perf | where ObjectName == 'Memory' and CounterName == '% Committed Bytes In Use' | summarize AvgMemoryUsage=avg(CounterValue) by bin(TimeGenerated, 5m), Computer | where AvgMemoryUsage > 80",
+          "evaluationFrequency": "PT5M",
+          "windowSize": "PT1H",
+          "threshold": 80,
+          "operator": "GreaterThan",
+          "timeAggregation": "Average",
+          "metricName": "Memory Usage",
+          "metricMeasureColumn": "AvgMemoryUsage"
+        },
+        {
+          "name": "DiskIO",
+          "description": "Alerts on high disk transfers per second",
+          "severity": 3,
+          "enabled": true,
+          "query": "Perf | where ObjectName == 'LogicalDisk' and CounterName == 'Disk Transfers/sec' | summarize AvgDiskTransfers=avg(CounterValue) by bin(TimeGenerated, 5m), Computer | where AvgDiskTransfers > 100",
+          "evaluationFrequency": "PT5M",
+          "windowSize": "PT1H",
+          "threshold": 100,
+          "operator": "GreaterThan",
+          "timeAggregation": "Average",
+          "metricName": "Disk Transfers/sec",
+          "metricMeasureColumn": "AvgDiskTransfers"
+        },
+        {
+          "name": "DiskSpace",
+          "description": "Alerts when disk space is running low",
+          "severity": 3,
+          "enabled": true,
+          "query": "Perf | where ObjectName == 'LogicalDisk' and CounterName == '% Free Space' | summarize AvgFreeSpace=avg(CounterValue) by bin(TimeGenerated, 5m), Computer | where AvgFreeSpace < 20",
+          "evaluationFrequency": "PT5M",
+          "windowSize": "PT1H",
+          "threshold": 20,
+          "operator": "LessThan",
+          "timeAggregation": "Average",
+          "metricName": "Free Space",
+          "metricMeasureColumn": "AvgFreeSpace"
+        },
+        {
+          "name": "DiskQueueLength",
+          "description": "Alerts on high disk queue length",
+          "severity": 3,
+          "enabled": true,
+          "query": "Perf | where ObjectName == 'PhysicalDisk' and CounterName == 'Avg. Disk Queue Length' | summarize AvgDiskQueueLength=avg(CounterValue) by bin(TimeGenerated, 5m), Computer | where AvgDiskQueueLength > 2",
+          "evaluationFrequency": "PT5M",
+          "windowSize": "PT1H",
+          "threshold": 2,
+          "operator": "GreaterThan",
+          "timeAggregation": "Average",
+          "metricName": "Disk Queue Length",
+          "metricMeasureColumn": "AvgDiskQueueLength"
+        },
+        {
+          "name": "NetworkIO",
+          "description": "Alerts on high network traffic",
+          "severity": 3,
+          "enabled": true,
+          "query": "Perf | where ObjectName == 'Network Interface' and CounterName == 'Bytes Total/sec' | summarize AvgNetworkTraffic=avg(CounterValue) by bin(TimeGenerated, 5m), Computer | where AvgNetworkTraffic > 100000000",
+          "evaluationFrequency": "PT5M",
+          "windowSize": "PT1H",
+          "threshold": 100000000,
+          "operator": "GreaterThan",
+          "timeAggregation": "Average",
+          "metricName": "Network Traffic",
+          "metricMeasureColumn": "AvgNetworkTraffic"
+        },
+        {
+          "name": "NetworkPackets",
+          "description": "Alerts on high network packets",
+          "severity": 3,
+          "enabled": true,
+          "query": "Perf | where ObjectName == 'Network Interface' and CounterName == 'Packets/sec' | summarize AvgNetworkPackets=avg(CounterValue) by bin(TimeGenerated, 5m), Computer | where AvgNetworkPackets > 1000",
+          "evaluationFrequency": "PT5M",
+          "windowSize": "PT1H",
+          "threshold": 1000,
+          "operator": "GreaterThan",
+          "timeAggregation": "Average",
+          "metricName": "Network Packets",
+          "metricMeasureColumn": "AvgNetworkPackets"
+        }     
       ]
     },
     {
       "type": "SQL",
       "alertRules": [
         {
-          "name": "HighDTUAlert",
-          "metricName": "dtu_consumption_percent",
-          "operator": "GreaterThan",
+          "name": "CpuUsageAlert",
+          "description": "Alerts when SQL Server CPU usage exceeds 80%",
+          "severity": 3,
+          "enabled": true,
+          "query": "AzureMetrics | where ResourceId contains 'SQL' and MetricName == 'cpu_percent' | summarize AvgCpuUsage=avg(Total) by bin(TimeGenerated, 5m) | where AvgCpuUsage > 80",
+          "evaluationFrequency": "PT5M",
+          "windowSize": "PT1H",
           "threshold": 80,
+          "operator": "GreaterThan",
           "timeAggregation": "Average",
-          "description": "High DTU consumption alert",
-          "windowSize": "5m",
-          "evaluationFrequency": "1m",
-          "severity": 4
+          "metricName": "CPU Percentage",
+          "metricMeasureColumn": "AvgCpuUsage"
         },
         {
-          "name": "HighConnectionAlert",
-          "metricName": "connections",
+          "name": "MemoryUsageAlert",
+          "description": "Alerts when SQL Server memory usage exceeds 80%",
+          "severity": 3,
+          "enabled": true,
+          "query": "AzureMetrics | where ResourceId contains 'SQL' and MetricName == 'memory_percent' | summarize AvgMemoryUsage=avg(Total) by bin(TimeGenerated, 5m) | where AvgMemoryUsage > 80",
+          "evaluationFrequency": "PT5M",
+          "windowSize": "PT1H",
+          "threshold": 80,
           "operator": "GreaterThan",
-          "threshold": 100,
           "timeAggregation": "Average",
-          "description": "High number of connections alert",
-          "windowSize": "5m",
-          "evaluationFrequency": "1m",
-          "severity": 4
-        }
+          "metricName": "Memory Percentage",
+          "metricMeasureColumn": "AvgMemoryUsage"
+        },
+        {
+          "name": "Deadlocks",
+          "description": "Alerts when SQL Server deadlocks occur",
+          "severity": 3,
+          "enabled": true,
+          "query": "AzureDiagnostics | where ResourceId contains 'SQL' and EventName == 'deadlock' | summarize Deadlocks=count() by bin(TimeGenerated, 5m) | where Deadlocks > 0",
+          "evaluationFrequency": "PT5M",
+          "windowSize": "PT1H",
+          "threshold": 0,
+          "operator": "GreaterThan",
+          "timeAggregation": "Count",
+          "metricName": "Deadlocks",
+          "metricMeasureColumn": "Deadlocks"
+        },
       ]
     }
   ]

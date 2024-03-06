@@ -40,7 +40,7 @@ function Install-AzureExtensionOnVMs {
          Write-Host "Installing Azure Monitor extension on VM: $($vm.Name)"
  
          # Install the Azure Monitor extension
-         Set-AzVMExtension -ResourceGroupName $vm.ResourceGroupName -VMName $vm.Name -Name "AzureMonitorWindowsAgent" -Publisher "Microsoft.Azure.Monitor" -ExtensionType "AzureMonitorWindowsAgent" -TypeHandlerVersion "1.0" -Location $vm.Location -SettingString (ConvertTo-Json $publicSettings) -ProtectedSettingString (ConvertTo-Json $privateSettings)
+         Set-AzVMExtension -ResourceGroupName $vm.ResourceGroupName -VMName $vm.Name -Name "AzureMonitorWindowsAgent" -Publisher "Microsoft.Azure.Monitor" -ExtensionType "AzureMonitorWindowsAgent" -TypeHandlerVersion "1.0" -Location $vm.Location -SettingString (ConvertTo-Json $publicSettings) -ProtectedSettingString (ConvertTo-Json $privateSettings) -EnableAutomaticUpgrade $true
  
          # Output a message after the extension is installed
          Write-Host "Azure extension installed on VM: $($vm.Name)"
@@ -180,23 +180,23 @@ function Apply-LogAlert {
 #     Write-Host "Log alert `"$($config.description)`" has been applied to $resourceId"
 # }
 
-# Load JSON configurations
-$configs = Get-Content -Path $jsonConfigPath | ConvertFrom-Json
+# # Load JSON configurations
+# $configs = Get-Content -Path $jsonConfigPath | ConvertFrom-Json
 
-# Iterate over configurations and apply them
-foreach ($configGroup in $configs.monitoringConfigurations) {
-    $taggedResources = Get-AzResource -Tag @{ Monitor = "Enabled" } | Where-Object { $_.Type -eq $configGroup.resourceType }
+# # Iterate over configurations and apply them
+# foreach ($configGroup in $configs.monitoringConfigurations) {
+#     $taggedResources = Get-AzResource -Tag @{ Monitor = "Enabled" } | Where-Object { $_.Type -eq $configGroup.resourceType }
 
-    foreach ($resource in $taggedResources) {
-        foreach ($config in $configGroup.configurations) {
-            if ($config.type -eq "metric") {
-                Apply-MetricAlert -resourceId $resource.Id -config $config -actionGroupId $actionGroupId
-            } elseif ($config.type -eq "log") {
-                Apply-LogAlert -resourceId $resource.Id -config $config -actionGroupId $actionGroupId
-            }
-        }
-    }
-}
+#     foreach ($resource in $taggedResources) {
+#         foreach ($config in $configGroup.configurations) {
+#             if ($config.type -eq "metric") {
+#                 Apply-MetricAlert -resourceId $resource.Id -config $config -actionGroupId $actionGroupId
+#             } elseif ($config.type -eq "log") {
+#                 Apply-LogAlert -resourceId $resource.Id -config $config -actionGroupId $actionGroupId
+#             }
+#         }
+#     }
+# }
 
 # # Function to apply metric-based alerts
 # function Apply-MetricAlert {

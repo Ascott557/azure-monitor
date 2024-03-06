@@ -1,9 +1,8 @@
-Import-Module Az.Monitor -Force
 # Global Variables
 $global:resourceGroupName = "Andre-AzureMonitor"
 $global:workspaceName = "amworkspace"
 $global:configPath = ".\src\alertConfig.json"
-$global:location = "global"
+$global:location = "northeurope"
 
 
 # Function to Load Configuration from JSON
@@ -17,36 +16,42 @@ function Load-Configuration {
 }
 function Get-ResourcesByType {
     param (
-        $ResourceType,
-        $ResourceGroupName
+        [string]$ResourceType,
+        [string]$ResourceGroupName
     )
 
     $resources = @()
 
     switch ($ResourceType) {
         "VM" {
-            $resources += Get-AzVM -ResourceGroupName $ResourceGroupName
-        }
-        "SQL" {
-            # Get all SQL servers in the resource group
-            $servers = Get-AzSqlServer -ResourceGroupName $ResourceGroupName
-            # For each server, get all databases and add them to the resources
-            foreach ($server in $servers) {
-                $resources += Get-AzSqlDatabase -ResourceGroupName $ResourceGroupName -ServerName $server.ServerName
+            $vms = Get-AzVM -ResourceGroupName $ResourceGroupName
+            foreach ($vm in $vms) {
+                $resources += $vm.Id
             }
         }
-        # Add more resource types as needed
+        "SQL" {
+            $servers = Get-AzSqlServer -ResourceGroupName $ResourceGroupName
+            foreach ($server in $servers) {
+                # Add the server's resource ID
+                $resources += $server.ResourceId
+
+                # Correctly fetch and add the databases' resource IDs
+                $databases = Get-AzSqlDatabase -ResourceGroupName $ResourceGroupName -ServerName $server.ServerName
+                foreach ($database in $databases) {
+                    # Ensure the subscription ID is correctly included
+                    $dbResourceId = $database.ResourceId
+                    $resources += $dbResourceId
+                }
+            }
+        }
     }
 
-    # Print out the resources for debugging
-    Write-Host "Resources of type ${ResourceType}:"
     foreach ($resource in $resources) {
-        Write-Host "Name: $($resource.Name), Id: $($resource.Id)"
+        Write-Host "Retrieved resource ID: $resource"
     }
 
     return $resources
 }
-
 
 # Function to Ensure Action Group Exists
 function Ensure-ActionGroupExists {
@@ -58,7 +63,6 @@ function Ensure-ActionGroupExists {
     $email = $config.email
     # Create an IEmailReceiver object for each email address
     $emailReceiver = New-AzActionGroupReceiver -Name "Primary Email" -EmailAddress $email
-    # Existing logic to check and create action group
     try {
         $actionGroup = Get-AzActionGroup -Name $actionGroupName -ResourceGroupName $resourceGroupName -ErrorAction Stop -Verbose
     } catch {
@@ -78,46 +82,105 @@ function Ensure-ActionGroupExists {
     }
     return $actionGroup.Id
 }
-# # Function to Fetch Resources
-# function Get-ResourcesByType {
-#     param ($Type)
-#     # Fetch resources based on type (VM, SQL, etc.)
-# }
-# Function to Apply Alert Rules
 
-# Import the module
-Import-Module Az.Monitor
+function Convert-ISO8601ToTimeSpan {
+    param (
+        [string]$Duration
+    )
+    $isoPattern = 'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?'
+    $simplePattern = '^(\d+)([hms])$'
+
+    if ($Duration -match $isoPattern) {
+        $hours = [int]$matches[1]
+        $minutes = [int]$matches[2]
+        $seconds = [int]$matches[3]
+        return New-TimeSpan -Hours $hours -Minutes $minutes -Seconds $seconds
+    } elseif ($Duration -match $simplePattern) {
+        switch ($matches[2]) {
+            'h' { return New-TimeSpan -Hours $matches[1] }
+            'm' { return New-TimeSpan -Minutes $matches[1] }
+            's' { return New-TimeSpan -Seconds $matches[1] }
+        }
+    } else {
+        throw "Invalid duration format: $Duration"
+    }
+}
+
+function Create-Condition {
+    param (
+        [PSCustomObject]$rule
+    )
+
+    $operator = switch ($rule.operator) {
+        "GreaterThan" { "GreaterThan" }
+        default { throw "Unsupported operator: $($rule.operator)" }
+    }
+
+    $dimension = $null
+    if ($rule.dimensions) {
+        $dimension = New-AzScheduledQueryRuleDimensionObject -Name $rule.dimensions.name `
+            -Operator $rule.dimensions.operator -Value $rule.dimensions.value
+    }
+
+    $condition = New-AzScheduledQueryRuleConditionObject `
+        -Query $rule.query `
+        -TimeAggregation $rule.timeAggregation `
+        -MetricMeasureColumn $rule.metricMeasureColumn `
+        -Operator $operator `
+        -Threshold $rule.threshold `
+        -FailingPeriodNumberOfEvaluationPeriod $rule.failingPeriodNumberOfEvaluationPeriod `
+        -FailingPeriodMinFailingPeriodsToAlert $rule.failingPeriodMinFailingPeriodsToAlert
+
+    if ($dimension) {
+        $condition.Dimension = @($dimension)
+    }
+
+    return $condition
+}
+
+
+    if ($dimension) {
+        $condition.Dimension = @($dimension)
+    }
+
+    return $condition
+
+
+# Assuming $resources holds the returned IDs from Get-ResourcesByType
+$validResourceIds = $resources.Where({ $_ -ne '' })
+
+foreach ($resourceId in $validResourceIds) {
+    Write-Host "Valid Resource ID for Scope: $resourceId"
+}
 
 function Apply-AlertRules {
     param (
-        $Resource,
+        $Resources,
         $AlertRules,
         $actionGroupId
     )
 
     foreach ($rule in $AlertRules) {
-        # Check if evaluationFrequency is not null
-        if ($null -eq $rule.evaluationFrequency) {
-            Write-Host "Evaluation frequency for rule $($rule.name) is null. Skipping this rule."
-            continue
-        }
+        if ($rule.query) {
+            $condition = Create-Condition -rule $rule
+            $evaluationFrequency = Convert-ISO8601ToTimeSpan -Duration $rule.evaluationFrequency
+            $windowSize = Convert-ISO8601ToTimeSpan -Duration $rule.windowSize
 
-        # Create criteria object
-        $criteria = New-AzMetricAlertRuleV2Criteria -MetricName $rule.metricName -Operator $rule.operator -Threshold $rule.threshold -TimeAggregation $rule.timeAggregation
+            # Ensure $Resources is correctly passed as the Scope. Let's use a single resource for simplicity
+            $scope = $Resources -join ";"
 
-        # Convert windowSize and evaluationFrequency to TimeSpan
-        $windowSize = New-TimeSpan -Minutes ([int]$rule.windowSize.TrimEnd('m'))
-        $evaluationFrequency = New-TimeSpan -Minutes ([int]$rule.evaluationFrequency.TrimEnd('m'))
+            New-AzScheduledQueryRule -ResourceGroupName $global:resourceGroupName `
+                -Location $global:location -Name $rule.name -Description $rule.description `
+                -Enabled:$true -Scope $scope -CriterionAllOf @($condition) `
+                -ActionGroupResourceId @($actionGroupId) -Severity $rule.severity `
+                -WindowSize $windowSize -EvaluationFrequency $evaluationFrequency `
+                -DisplayName $rule.name
 
-        # Create alert rule
-        if (![string]::IsNullOrEmpty($Resource.Id)) {
-            Add-AzMetricAlertRuleV2 -Name $rule.name -ResourceGroupName $Resource.ResourceGroupName -WindowSize $windowSize -Frequency $evaluationFrequency -TargetResourceId $Resource.Id -Criteria $criteria -ActionGroupId $actionGroupId -Severity $rule.severity -Description $rule.description
-            Write-Host "Metric alert rule '$($rule.name)' applied to $($Resource.Id)"
-        } else {
-            throw "Resource Id for rule '$($rule.name)' is null or empty."
+            Write-Host "Created query-based alert rule: $($rule.name)"
         }
     }
 }
+
 # Main Script Execution
 $config = Load-Configuration -ConfigPath $global:configPath
 Write-Host "Loaded configuration: $($config | ConvertTo-Json -Depth 5)"
