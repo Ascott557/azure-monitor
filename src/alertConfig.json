@@ -10,35 +10,35 @@
       "type": "VM",
       "alertRules": [
         {
-          "name": "CPUUtilization",
-          "description": "Alerts when CPU utilization exceeds 80%",
+          "name": "High CPUUtilization",
+          "description": "Alerts when CPU utilization exceeds 90%",
           "severity": 3,
           "enabled": true,
-          "query": "Perf | where ObjectName == 'Processor' and CounterName == '% Processor Time' and InstanceName == '_Total' | summarize AvgCPUUsage=avg(CounterValue) by bin(TimeGenerated, 5m), Computer | where AvgCPUUsage > 80",
+          "query": "Perf | where ObjectName == 'Processor' and CounterName == '% Processor Time' and InstanceName == '_Total' | summarize AvgCPUUsage=avg(CounterValue) by bin(TimeGenerated, 5m), Computer | where AvgCPUUsage > 90",
           "evaluationFrequency": "PT5M",
           "windowSize": "PT1H",
-          "threshold": 80,
+          "threshold": 90,
           "operator": "GreaterThan",
           "timeAggregation": "Average",
           "metricName": "Processor Time",
           "metricMeasureColumn": "AvgCPUUsage"
         },
         {
-          "name": "MemoryUsage",
-          "description": "Alerts when memory usage exceeds 80%",
+          "name": "High MemoryUsage",
+          "description": "Alerts when memory usage exceeds 90%",
           "severity": 3,
           "enabled": true,
-          "query": "Perf | where ObjectName == 'Memory' and CounterName == '% Committed Bytes In Use' | summarize AvgMemoryUsage=avg(CounterValue) by bin(TimeGenerated, 5m), Computer | where AvgMemoryUsage > 80",
+          "query": "Perf | where ObjectName == 'Memory' and CounterName == '% Committed Bytes In Use' | summarize AvgMemoryUsage=avg(CounterValue) by bin(TimeGenerated, 5m), Computer | where AvgMemoryUsage > 90",
           "evaluationFrequency": "PT5M",
           "windowSize": "PT1H",
-          "threshold": 80,
+          "threshold": 90,
           "operator": "GreaterThan",
           "timeAggregation": "Average",
           "metricName": "Memory Usage",
           "metricMeasureColumn": "AvgMemoryUsage"
         },
         {
-          "name": "DiskIO",
+          "name": "High DiskIO",
           "description": "Alerts on high disk transfers per second",
           "severity": 3,
           "enabled": true,
@@ -52,7 +52,7 @@
           "metricMeasureColumn": "AvgDiskTransfers"
         },
         {
-          "name": "DiskSpace",
+          "name": "Low DiskSpace",
           "description": "Alerts when disk space is running low",
           "severity": 3,
           "enabled": true,
@@ -113,7 +113,7 @@
       "type": "SQL",
       "alertRules": [
         {
-          "name": "CpuUsageAlert",
+          "name": "SQL CpuUsageAlert",
           "description": "Alerts when SQL Server CPU usage exceeds 80%",
           "severity": 3,
           "enabled": true,
@@ -127,7 +127,7 @@
           "metricMeasureColumn": "AvgCpuUsage"
         },
         {
-          "name": "MemoryUsageAlert",
+          "name": "SQL MemoryUsageAlert",
           "description": "Alerts when SQL Server memory usage exceeds 80%",
           "severity": 3,
           "enabled": true,
@@ -141,7 +141,7 @@
           "metricMeasureColumn": "AvgMemoryUsage"
         },
         {
-          "name": "Deadlocks",
+          "name": "SQL Deadlocks",
           "description": "Alerts when SQL Server deadlocks occur",
           "severity": 3,
           "enabled": true,

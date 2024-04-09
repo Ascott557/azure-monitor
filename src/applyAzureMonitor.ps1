@@ -64,28 +64,7 @@ $sqldatabases = Get-AzResource -Tag @{ Monitor = "Enabled" } -ResourceType "Micr
 Write-Host "Found $($sqldatabases.Count) SQL Databases with Monitor tag set to Enabled"
 # Loop through each SQL Database
 
-function Apply-LogAlert {
-    param (
-        [string]$resourceId,
-        [pscustomobject]$config,
-        [string]$actionGroupId
-    )
-
-    $actionGroupResourceId = (Get-AzActionGroup -Name $actionGroupId -ResourceGroupName $resourceGroupName).Id
-
-    $dimension = New-AzScheduledQueryRuleDimensionObject -Name "Computer" -Operator "Include" -Value "*"
-    $condition = New-AzScheduledQueryRuleConditionObject -Dimension $dimension -Query $config.query -TimeAggregation "Average" -MetricMeasureColumn $config.metricMeasureColumn -Operator "GreaterThan" -Threshold 0 -FailingPeriodNumberOfEvaluationPeriod 1 -FailingPeriodMinFailingPeriodsToAlert 1
-
-    # Ensure the time window is a supported granularity
-    if ($config.timeWindowInMinutes -notin @(5, 10, 15, 30, 45, 60, 120, 180, 240, 300, 360, 1440, 2880)) {
-        Write-Error "The time window must be one of the following values: 5, 10, 15, 30, 45, 60, 120, 180, 240, 300, 360, 1440, 2880"
-        return
-    }
-
-    New-AzScheduledQueryRule -ResourceGroupName $resourceGroupName -Name $config.description -Location "northeurope" -Description $config.description -ActionGroupResourceId $actionGroupResourceId -CriterionAllOf $condition -Severity $config.severity -Enabled -EvaluationFrequency ([TimeSpan]::FromMinutes($config.frequencyInMinutes)) -WindowSize ([TimeSpan]::FromMinutes($config.timeWindowInMinutes)) -Scope $resourceId
-
-    Write-Host "Log alert `"$($config.description)`" has been applied to $resourceId"
-}
+~
 # function Apply-LogAlert {
 #     param (
 #         [string]$resourceId,

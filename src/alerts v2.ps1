@@ -1,3 +1,4 @@
+Import-Module Az.Monitor -Force
 # Global Variables
 $global:resourceGroupName = "Andre-AzureMonitor"
 $global:workspaceName = "amworkspace"
@@ -52,7 +53,11 @@ function Get-ResourcesByType {
 
     return $resources
 }
-Import-Module Az.Monitor -Force 
+
+
+
+
+
 # Function to Ensure Action Group Exists
 function Ensure-ActionGroupExists {
     param (
@@ -82,7 +87,14 @@ function Ensure-ActionGroupExists {
     }
     return $actionGroup.Id
 }
+# # Function to Fetch Resources
+# function Get-ResourcesByType {
+#     param ($Type)
+#     # Fetch resources based on type (VM, SQL, etc.)
+# }
+# Function to Apply Alert Rules
 
+# Import the module
 function Convert-ISO8601ToTimeSpan {
     param (
         [string]$Duration
@@ -105,29 +117,25 @@ function Convert-ISO8601ToTimeSpan {
         throw "Invalid duration format: $Duration"
     }
 }
-Import-Module Az.Monitor -Force
+
 function Create-Condition {
     param (
         [PSCustomObject]$rule
     )
 
-    $operator = switch ($rule.operator) {
-        "GreaterThan" { "GreaterThan" }
-        default { throw "Unsupported operator: $($rule.operator)" }
-    }
+    Write-Host "Operator: $($rule.operator)"
 
+    # Create dimension object if your rule requires it
     $dimension = $null
     if ($rule.dimensions) {
         $dimension = New-AzScheduledQueryRuleDimensionObject -Name $rule.dimensions.name `
             -Operator $rule.dimensions.operator -Value $rule.dimensions.value
     }
 
-    $condition = New-AzScheduledQueryRuleConditionObject `
-        -Query $rule.query `
-        -TimeAggregation $rule.timeAggregation `
-        -MetricMeasureColumn $rule.metricMeasureColumn `
-        -Operator $operator `
-        -Threshold $rule.threshold `
+    # Create condition object
+    $condition = New-AzScheduledQueryRuleConditionObject -Query $rule.query `
+        -TimeAggregation $rule.timeAggregation -MetricMeasureColumn $rule.metricMeasureColumn `
+        -Operator $rule.operator -Threshold $rule.threshold `
         -FailingPeriodNumberOfEvaluationPeriod $rule.failingPeriodNumberOfEvaluationPeriod `
         -FailingPeriodMinFailingPeriodsToAlert $rule.failingPeriodMinFailingPeriodsToAlert
 
@@ -138,13 +146,7 @@ function Create-Condition {
     return $condition
 }
 
-
-    if ($dimension) {
-        $condition.Dimension = @($dimension)
-    }
-
-    return $condition
-
+Import-Module Az.Monitor
 
 # Assuming $resources holds the returned IDs from Get-ResourcesByType
 $validResourceIds = $resources.Where({ $_ -ne '' })
@@ -155,31 +157,38 @@ foreach ($resourceId in $validResourceIds) {
 
 function Apply-AlertRules {
     param (
-        $Resources,
+        $Resource,
         $AlertRules,
         $actionGroupId
     )
 
     foreach ($rule in $AlertRules) {
-        if ($rule.query) {
-            $condition = Create-Condition -rule $rule
-            $evaluationFrequency = Convert-ISO8601ToTimeSpan -Duration $rule.evaluationFrequency
-            $windowSize = Convert-ISO8601ToTimeSpan -Duration $rule.windowSize
+        try {
+            if ($rule.query) {
+                $evaluationFrequency = Convert-ISO8601ToTimeSpan -Duration $rule.evaluationFrequency
+                $windowSize = Convert-ISO8601ToTimeSpan -Duration $rule.windowSize
+                $condition = Create-Condition -rule $rule
 
-            # Ensure $Resources is correctly passed as the Scope. Let's use a single resource for simplicity
-            $scope = $Resources -join ";"
+                # Create scheduled query rule with CriterionAllOf
+                Write-Host "Severity: $($rule.severity)" 
+                Write-Host "Rule: $($rule.name), Severity: $($rule.severity)" 
+                Write-Host "EvaluationFrequency: $($evaluationFrequency.TotalMinutes)"  
+                Write-Host "ThresholdOperator: $($condition.ThresholdOperator)"            
+                New-AzScheduledQueryRule -ResourceGroupName $global:resourceGroupName `
+                    -Location $global:location -Name $rule.name -Description $rule.description `
+                    -Enabled:$true -Scope $validResourceIds -CriterionAllOf @($condition) `
+                    -ActionGroupResourceId @($actionGroupId) -Severity $rule.severity `
+                    -WindowSize $windowSize -EvaluationFrequency $evaluationFrequency `
+                    -DisplayName $rule.name
 
-            New-AzScheduledQueryRule -ResourceGroupName $global:resourceGroupName `
-                -Location $global:location -Name $rule.name -Description $rule.description `
-                -Enabled:$true -Scope $scope -CriterionAllOf @($condition) `
-                -ActionGroupResourceId @($actionGroupId) -Severity $rule.severity `
-                -WindowSize $windowSize -EvaluationFrequency $evaluationFrequency `
-                -DisplayName $rule.name
-
-            Write-Host "Created query-based alert rule: $($rule.name)"
+                Write-Host "Created query-based alert rule: $($rule.name)"
+            }
+        } catch {
+            Write-Host "Error applying rule $($rule.name): $_"
         }
     }
 }
+
 
 # Main Script Execution
 $config = Load-Configuration -ConfigPath $global:configPath
