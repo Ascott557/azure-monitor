@@ -34,7 +34,7 @@
         - Set up CI/CD pipelines in Azure DevOps or GitHub Actions to automate configuration deployments.
         - Test and validate the monitoring solution in controlled environments before widespread implementation.
         - Roll out updates and new configurations automatically, maintaining minimal monitoring costs while maximizing coverage and effectiveness.
-        
+        - Rest Api? 
 
 ## Cost Management
 
